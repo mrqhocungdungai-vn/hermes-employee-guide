@@ -210,10 +210,51 @@ Viết rõ những gì agent KHÔNG làm. Ví dụ:
 
 ---
 
+## Bạn có cần AgentShield không?
+
+Trước khi cài AgentShield, hãy hiểu rõ **2 lớp bảo vệ** độc lập nhau:
+
+### Layer 1 — Hermes config (tool layer) — BẮT BUỘC
+
+Đây là lớp bắt buộc, không thể bỏ qua. Hermes hỗ trợ native việc giới hạn tools theo platform — loại bỏ hoàn toàn các công cụ nguy hiểm khỏi context của agent khi serve Telegram.
+
+```yaml
+# ~/.hermes/config.yaml
+platform_toolsets:
+  telegram:
+    - safe    # loại bỏ terminal, file, process — agent không có tool này để chạy
+```
+
+Kết hợp với `TELEGRAM_ALLOW_ALL_USERS=true` trong `.env`, Layer 1 đã đủ để deploy an toàn trong nhiều trường hợp. **Đây là thiết lập bắt buộc cho mọi public agent — dù có hay không có AgentShield.**
+
+### Layer 2 — AgentShield (message layer) — Tùy chọn
+
+Cài AgentShield nếu bạn cần thêm:
+
+- **Rate limiting per user** — giới hạn số tin nhắn mỗi phút và mỗi ngày
+- **Topic guard** — chặn từ khóa nguy hiểm trước khi agent xử lý
+- **Conversation logging** — ghi log theo từng user
+- **Owner alerts** — nhận thông báo khi có hành động bị chặn
+
+### Mô hình bảo mật
+
+Hai layer hoạt động độc lập. Nếu AgentShield lỗi, Layer 1 vẫn giữ agent an toàn. Đây là nguyên tắc **defense in depth** — không phụ thuộc vào một lớp duy nhất.
+
+```
+[User gửi tin nhắn]
+       ↓
+[Layer 2: AgentShield] → rate limit, topic guard, logging
+       ↓
+[Layer 1: Hermes config] → safe toolset, không có terminal/file/process
+       ↓
+[Agent xử lý và trả lời]
+```
+
+---
+
 ## Bước 5: Cài và cấu hình AgentShield
 
-AgentShield là lớp bảo vệ thứ hai — rate limiting, topic guard, chặn lệnh hệ thống.
-Bắt buộc cho bất kỳ agent nào chạy public.
+AgentShield là Layer 2 tùy chọn — rate limiting, topic guard, logging per user.
 
 ### Cài đặt
 

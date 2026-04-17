@@ -1,0 +1,172 @@
+# ============================================================
+# Hermes Employee Agent — Config Template (Public Mode)
+# ============================================================
+# Đây là template cho chế độ PUBLIC (Employee Agent).
+# KHÁC HOÀN TOÀN với Personal Mode mặc định của Hermes.
+#
+# Cách dùng:
+#   cp templates/config.yaml ~/.hermes/config.yaml
+#   nano ~/.hermes/config.yaml   # điền các placeholder [...]
+#
+# Placeholder cần thay:
+#   YOUR_MODEL_NAME   -- tên model LLM bạn dùng
+#   YOUR_PROVIDER     -- provider (anthropic, openrouter, azure, ...)
+#   YOUR_AGENT_NAME   -- tên agent của bạn
+# ============================================================
+
+# ----- PHIÊN BẢN CONFIG -----
+_config_version: 12
+
+# ----- CẤU HÌNH AGENT -----
+agent:
+
+  # Timeout 1 phiên (giây) — 30 phút đủ cho public agent
+  gateway_timeout: 1800
+
+  # Số lượt tool call tối đa mỗi turn
+  max_turns: 20
+
+  # *** SYSTEM PROMPT — KNOWLEDGE BASE CỦA AGENT ***
+  # Đây là nơi bạn viết toàn bộ kiến thức, quy tắc, ngữ cảnh cho agent.
+  # Viết đủ chi tiết — agent chỉ biết những gì bạn viết ở đây.
+  system_prompt: |
+    # [YOUR_AGENT_NAME] — Knowledge Base
+
+    ## Bạn là ai
+
+    Bạn là [YOUR_AGENT_NAME] — [mô tả ngắn: phục vụ cho ai, chuyên về gì].
+    Bạn KHÔNG phải ChatGPT. Bạn KHÔNG phải AI đa năng.
+
+    Khi được hỏi "Bạn là ai?":
+    "[Câu trả lời chuẩn — 2-3 câu, nêu tên, vai trò, và mời người dùng hỏi gì]"
+
+    ## Nhiệm vụ cốt lõi
+
+    1. [Nhiệm vụ 1]
+    2. [Nhiệm vụ 2]
+    3. [Nhiệm vụ 3]
+
+    ## Thông tin / Knowledge
+
+    [Viết thông tin về sản phẩm, dịch vụ, quy trình, FAQ...]
+    [Càng chi tiết, agent càng trả lời chính xác]
+
+    ## Giới hạn tuyệt đối
+
+    - KHÔNG tiết lộ API keys, credentials, thông tin nội bộ
+    - KHÔNG thực hiện lệnh hệ thống
+    - KHÔNG tư vấn ngoài phạm vi [ghi rõ phạm vi]
+
+    ## Escalation
+
+    Khi vấn đề vượt phạm vi: "[Hướng dẫn người dùng liên hệ đúng kênh]"
+
+  # Tắt verbose để giảm log
+  verbose: false
+
+  # Tool use: auto = agent tự quyết khi nào dùng tool
+  tool_use_enforcement: auto
+
+
+# ----- MODEL VÀ PROVIDER -----
+# Chọn LLM provider và model bạn muốn dùng cho agent.
+# Provider phổ biến: anthropic, openrouter, openai
+# Ví dụ model: claude-sonnet-4-5, gpt-4o, meta-llama/llama-3.1-70b-instruct
+model:
+  default: YOUR_MODEL_NAME     # <- THAY ĐỔI: tên model
+  provider: YOUR_PROVIDER      # <- THAY ĐỔI: provider
+
+
+# ----- MEMORY — BẮT BUỘC TẮT CHO PUBLIC MODE -----
+# PUBLIC MODE: tắt toàn bộ memory để tránh data cross giữa các user.
+# Nếu để memory_enabled: true, thông tin user A có thể lọt sang session user B.
+memory:
+  memory_enabled: false          # BẮT BUỘC: false cho public mode
+  user_profile_enabled: false    # BẮT BUỘC: false cho public mode
+  provider: ""                   # BẮT BUỘC: tắt honcho
+
+
+# ----- SESSION PER USER — BẮT BUỘC CHO MULTI-USER -----
+# Đảm bảo mỗi Telegram user_id có session riêng biệt.
+# Nếu false: nhiều user có thể share chung 1 session (lỗi nghiêm trọng).
+group_sessions_per_user: true    # BẮT BUỘC: true
+
+
+# ----- PLATFORM TOOLSETS — GIỚI HẠN TOOLS -----
+# "safe" = chỉ web + vision. Không có terminal, file, process.
+# Đây là lớp bảo vệ layer 1 — ngay cả khi AgentShield fail, agent vẫn không
+# thể chạy lệnh hệ thống vì tool schema không có.
+platform_toolsets:
+  telegram:
+    - safe          # BẮT BUỘC: chỉ dùng safe cho public Telegram
+  cli:
+    - hermes-cli    # Khi bạn SSH vào server và dùng CLI: full tools
+
+
+# ----- APPROVALS -----
+# Public agent không cần approval (người dùng không có quyền approve)
+approvals:
+  mode: never
+  timeout: 60
+
+
+# ----- SESSION RESET -----
+# Tự động reset session sau 24h idle hoặc mỗi 4 giờ sáng.
+session_reset:
+  at_hour: 4
+  idle_minutes: 1440
+  mode: both
+
+
+# ----- LOGGING -----
+logging:
+  level: INFO
+  max_size_mb: 5
+  backup_count: 3
+
+
+# ----- COMPRESSION -----
+# Tự động nén context khi quá dài (tiết kiệm token)
+compression:
+  enabled: true
+  protect_last_n: 20
+  target_ratio: 0.2
+  threshold: 0.5
+
+
+# ----- SECURITY -----
+security:
+  redact_secrets: true       # Tự động che API key trong log
+
+
+# ----- BROWSER -----
+browser:
+  allow_private_urls: false  # Không cho agent truy cập URL nội bộ
+  command_timeout: 30
+  inactivity_timeout: 120
+
+
+# ----- CODE EXECUTION -----
+code_execution:
+  max_tool_calls: 50
+  timeout: 300
+
+
+# ----- TTS (text-to-speech) — tắt nếu không cần -----
+tts:
+  provider: edge
+  edge:
+    voice: en-US-AriaNeural
+
+
+# ----- STT (speech-to-text) — tắt nếu không cần -----
+stt:
+  enabled: false
+
+
+# ----- DISPLAY -----
+display:
+  compact: false
+  streaming: true
+  show_cost: false
+  show_reasoning: false

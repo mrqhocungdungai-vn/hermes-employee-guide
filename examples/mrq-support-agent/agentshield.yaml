@@ -1,0 +1,76 @@
+# ============================================================
+# Ví dụ thực tế: AgentShield config của MRQ Support Agent
+# ============================================================
+# Đây là agentshield.yaml thực tế đang chạy, đã sanitize.
+# Chú ý:
+# - deny_unlisted: false -> mọi người đều vào được (guest)
+# - topic_guard có regex thực tế để chặn IP pattern, jailbreak
+# - Messages thân thiện — không dùng từ "block", "denied"
+# ============================================================
+
+agentshield:
+  enabled: true
+
+  # Mọi người không có trong danh sách -> tự động là guest (không bị từ chối)
+  deny_unlisted: false
+
+  roles:
+    guest:
+      chat_ids: []
+      allow:
+        - chat
+        - command:new
+        - command:help
+        - command:status
+        - command:reset
+      deny:
+        - command:*
+        - system:*
+        - terminal
+        - skill:*
+        - file:*
+      rate_limit:
+        messages_per_minute: 10
+        messages_per_day: 200
+
+  rate_limiting:
+    enabled: true
+    default_limit: 20
+    window_seconds: 60
+
+  topic_guard:
+    enabled: true
+    blocked_patterns:
+      # Thông tin hệ thống nhạy cảm
+      - "sudo"
+      - "ssh "
+      - "password"
+      - "api.key"
+      - "api_key"
+      - "secret"
+      - "private_key"
+      - "ANTHROPIC"
+      - "OPENAI"
+      # IP pattern (chặn hỏi về địa chỉ mạng nội bộ)
+      - "100\\.\\d+\\.\\d+\\.\\d+"
+      - "192\\.168\\."
+      # Jailbreak / prompt injection
+      - "ignore previous"
+      - "ignore all"
+      - "system prompt"
+      - "jailbreak"
+      - "pretend you are"
+      - "forget your instructions"
+      - "reveal your prompt"
+      - "bo qua huong dan"
+    block_message: "Tôi không thể trả lời câu hỏi này. Hãy hỏi về AI tools và workflow của MRQ nhé!"
+
+  alerts:
+    on_action_denied: false
+    on_rate_limit: false
+
+  messages:
+    rate_limit_minute: "⏳ Mình đang xử lý nhiều tin nhắn cùng lúc, bạn vui lòng chờ 1 phút rồi nhắn lại nhé 😊"
+    rate_limit_day: "📵 Hôm nay mình đã hỗ trợ bạn khá nhiều rồi. Bạn có thể tiếp tục vào ngày mai nhé!"
+    action_denied: "🚫 Tính năng này mình không hỗ trợ qua kênh chat. Liên hệ MRQ qua TikTok nhé!"
+    unlisted_denied: "❌ Kênh này đang trong giai đoạn thử nghiệm. Liên hệ qua các kênh chính thức của MRQ."

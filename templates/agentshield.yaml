@@ -1,0 +1,121 @@
+# ============================================================
+# AgentShield Config Template
+# ============================================================
+# File bảo vệ agent khỏi: lạm dụng, spam, jailbreak, truy cập
+# thông tin nội bộ, và các hành vi ngoài phạm vi.
+#
+# Cách dùng:
+#   cp templates/agentshield.yaml ~/.hermes/agentshield.yaml
+#   Điều chỉnh rate_limit và blocked_patterns cho phù hợp
+#
+# AgentShield là hook của Hermes — chạy TRƯỚC khi agent xử lý.
+# Khi block: agent không bao giờ thấy tin nhắn đó.
+# ============================================================
+
+agentshield:
+  enabled: true
+
+  # deny_unlisted: false = người không có trong danh sách -> tự động là guest
+  # deny_unlisted: true  = người không có trong danh sách -> bị từ chối
+  # Với public agent: để false (mọi người đều vào được với quyền guest)
+  deny_unlisted: false
+
+
+  # ----- ROLES — PHÂN QUYỀN NGƯỜI DÙNG -----
+  roles:
+
+    # Role "guest": áp dụng cho tất cả người dùng không xác định
+    # Đây là role duy nhất cần thiết cho public Employee Agent
+    guest:
+      # chat_ids: [] = không lock cứng ai — mọi người đều là guest
+      chat_ids: []
+
+      # Cho phép: chat bình thường + một số lệnh cơ bản
+      allow:
+        - chat
+        - command:new       # tạo session mới
+        - command:help      # xem trợ giúp
+        - command:reset     # reset session
+
+      # Từ chối: lệnh hệ thống, terminal, skill invocation, file access
+      deny:
+        - command:*         # tất cả lệnh khác (trừ những cái đã allow ở trên)
+        - system:*          # lệnh hệ thống
+        - terminal          # chạy lệnh terminal
+        - skill:*           # gọi skill
+        - file:*            # đọc/ghi file
+
+      # Rate limit: giới hạn tin nhắn để tránh spam và lạm dụng
+      rate_limit:
+        messages_per_minute: 10    # 10 tin/phút = đủ cho hội thoại bình thường
+        messages_per_day: 100      # 100 tin/ngày = hợp lý cho 1 người dùng
+
+
+  # ----- RATE LIMITING TOÀN CỤC -----
+  rate_limiting:
+    enabled: true
+    default_limit: 20       # backup limit nếu role không set
+    window_seconds: 60
+
+
+  # ----- TOPIC GUARD — LỌC NỘI DUNG -----
+  # Chặn tin nhắn chứa các pattern nguy hiểm trước khi đến agent.
+  # Dùng regex — cẩn thận với ký tự đặc biệt.
+  topic_guard:
+    enabled: true
+    blocked_patterns:
+      # --- Thông tin nhạy cảm ---
+      - "api.key"
+      - "api_key"
+      - "secret"
+      - "password"
+      - "private_key"
+      - "token"
+
+      # --- Lệnh hệ thống ---
+      - "sudo"
+      - "ssh "
+      - "curl "
+      - "wget "
+      - "rm -"
+      - "chmod"
+
+      # --- Jailbreak / Prompt injection ---
+      - "ignore previous"
+      - "ignore all"
+      - "system prompt"
+      - "jailbreak"
+      - "pretend you are"
+      - "forget your instructions"
+      - "reveal your prompt"
+      - "act as"
+      - "dan mode"
+      - "bo qua huong dan"       # tiếng Việt: "bỏ qua hướng dẫn"
+      - "quen di nhiem vu"       # tiếng Việt: "quên đi nhiệm vụ"
+
+      # --- IP / địa chỉ mạng ---
+      - "192\\.168\\."
+      - "10\\.\\d+\\.\\d+\\.\\d+"
+
+      # *** THÊM PATTERNS ĐẶC THÙ CỦA BẠN Ở ĐÂY ***
+      # Ví dụ: chặn hỏi về đối thủ cạnh tranh, giá nội bộ, v.v.
+
+    # Thông báo khi bị chặn — viết thân thiện, không nói "bị block"
+    block_message: "Mình không thể trả lời câu hỏi này. Bạn có câu hỏi nào khác về [lĩnh vực của bạn] không?"
+
+
+  # ----- ALERTS — THÔNG BÁO CHO OWNER -----
+  # Khi có hành vi bất thường, AgentShield có thể alert cho bạn.
+  # Nếu bạn chưa setup alert, để false hết.
+  alerts:
+    on_action_denied: false    # Không alert mỗi lần guest bị từ chối (quá nhiều)
+    on_rate_limit: false       # Không alert mỗi lần rate limit (quá nhiều)
+
+
+  # ----- MESSAGES — NỘI DUNG THÔNG BÁO TRẢ VỀ USER -----
+  # Tùy chỉnh thông báo cho phù hợp với tone của agent bạn.
+  messages:
+    rate_limit_minute: "Mình đang xử lý nhiều tin nhắn cùng lúc, bạn vui lòng chờ 1 phút rồi nhắn lại nhé 😊"
+    rate_limit_day: "Hôm nay mình đã hỗ trợ bạn rất nhiều rồi. Bạn có thể tiếp tục vào ngày mai nhé!"
+    action_denied: "Tính năng này mình không hỗ trợ qua kênh chat. Bạn có thể liên hệ trực tiếp với chúng mình nhé!"
+    unlisted_denied: "Kênh này hiện đang trong giai đoạn thử nghiệm. Liên hệ qua kênh chính thức để được hỗ trợ."
